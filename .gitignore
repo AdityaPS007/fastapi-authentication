@@ -1,0 +1,12 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# SQLite temporary files
+*.db-journal
+
+# Environment variables
+.env
+
+# macOS
+.DS_Store
