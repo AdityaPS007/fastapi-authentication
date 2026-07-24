@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import sqlite3
+import bcrypt
 
 app=FastAPI()
 
@@ -101,9 +102,12 @@ def login(data:Login):
 def register(user:Register):
     conn=sqlite3.connect("users.db")
     cursor=conn.cursor()
+    
+    hashed_password=bcrypt.hashpw(user.password.encode(),bcrypt.gensalt()).decode()
+    
     cursor.execute(
         "insert into users(name,email,password) values(?,?,?)",
-        (user.name,user.email,user.password)
+        (user.name,user.email,hashed_password)
     )
     conn.commit()
     conn.close()
@@ -134,6 +138,7 @@ def get_users():
             "id":user[0],
             "name":user[1],
             "email":user[2]
+            
         })
     conn.close()
     return result
