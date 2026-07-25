@@ -2,6 +2,11 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import sqlite3
 import bcrypt
+from jose import jwt
+from datetime import datetime, timedelta
+
+SECRET_KEY="aditya_fastapi_jwt_secret_12345_xyz"
+ALGORITHM="HS256"
 
 app=FastAPI()
 
@@ -159,8 +164,18 @@ def login(data: Login):
             "message":"User not found"
         }
     elif bcrypt.checkpw(data.password.encode(),user[3].encode()):
+        
+        expiration_time=datetime.utcnow() + timedelta(minutes=30)
+        payload={
+            "user_id":user[0],
+            "exp": expiration_time
+        }
+        token=jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
+        
         return{
-            "message":"login successful"
+            "message":"login successful",
+            "access_token": token,
+            "token_type": "bearer"
         }
     else:
         return{
