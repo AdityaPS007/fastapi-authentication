@@ -170,7 +170,7 @@ def login(data: Login):
             "user_id":user[0],
             "exp": expiration_time
         }
-        token=jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
+        token=jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)    #tokenization
         
         return{
             "message":"login successful",
