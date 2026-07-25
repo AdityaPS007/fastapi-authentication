@@ -72,31 +72,31 @@ def create_user(user:User):
 
 
     
-@app.post("/login")
+# @app.post("/login")
 
-def login(data:Login):
-    conn=sqlite3.connect("users.db")
-    cursor=conn.cursor()
-    cursor.execute(
-        "select * from users where email=?",(data.email,)
-    )
-    user=cursor.fetchone()
-    if user is None:
-        return{
-            "message":"user not found"
-        }
-    elif data.password==user[3]:
-        return {
-            "message":"Login Successful"
-        }
-    else:
-        return {
-            "message":"Incorrect Password"
-        }
+# def login(data:Login):
+#     conn=sqlite3.connect("users.db")
+#     cursor=conn.cursor()
+#     cursor.execute(
+#         "select * from users where email=?",(data.email,)
+#     )
+#     user=cursor.fetchone()
+#     if user is None:
+#         return{
+#             "message":"user not found"
+#         }
+#     elif data.password==user[3]:
+#         return {
+#             "message":"Login Successful"
+#         }
+#     else:
+#         return {
+#             "message":"Incorrect Password"
+#         }
     
         
         
-    
+#-----Hash passwords during user registration using bcrypt----
     
 @app.post("/register")
 def register(user:Register):
@@ -142,3 +142,27 @@ def get_users():
         })
     conn.close()
     return result
+
+
+#---Login authentication using bcrypt---
+
+@app.post("/login")
+def login(data: Login):
+    conn=sqlite3.connect("users.db")
+    cursor=conn.cursor()
+    cursor.execute(
+        "select * from users where email=?",(data.email,)
+    )
+    user=cursor.fetchone()
+    if user is None:
+        return{
+            "message":"User not found"
+        }
+    elif bcrypt.checkpw(data.password.encode(),user[3].encode()):
+        return{
+            "message":"login successful"
+        }
+    else:
+        return{
+            "message":"incorrect password"
+        }
