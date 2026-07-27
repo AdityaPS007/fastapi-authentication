@@ -4,6 +4,11 @@ import sqlite3
 import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
+from fastapi import Header
+from fastapi.security import OAuth2PasswordBearer
+from fastapi import HTTPException, status, Depends
+from jose import JWTError
+
 
 SECRET_KEY="aditya_fastapi_jwt_secret_12345_xyz"
 ALGORITHM="HS256"
@@ -181,3 +186,54 @@ def login(data: Login):
         return{
             "message":"incorrect password"
         }
+        
+    
+@app.get("/test-header")
+def test_header(authorization: str=Header()):
+    return{
+        "Authorization Header":authorization
+    }
+        
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+def get_current_user(token: str=Depends(oauth2_scheme)):
+    try:
+        payload=jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
+        user_id=payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        return user_id
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+        
+@app.get("/profile")
+def get_profile(current_user: int=Depends(get_current_user)):
+    
+    connection=sqlite3.connect("users.db")
+    cursor=connection.cursor()
+    
+    cursor.execute(
+        "select id, name, email from users where id=?",(current_user,)
+    )
+    user=cursor.fetchone()
+    
+    connection.close()
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return{
+        "is":user[0],
+        "name":user[1],
+        "email":user[2]
+    }
