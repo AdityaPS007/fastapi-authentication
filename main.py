@@ -5,7 +5,7 @@ import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta
 from fastapi import Header
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi import HTTPException, status, Depends
 from jose import JWTError
 
@@ -14,6 +14,10 @@ SECRET_KEY="aditya_fastapi_jwt_secret_12345_xyz"
 ALGORITHM="HS256"
 
 app=FastAPI()
+
+@app.get("/ping")
+def ping():
+    return {"status": "ok"}
 
 #-------GET APIs-------#
 
@@ -157,18 +161,18 @@ def get_users():
 #---Login authentication using bcrypt---
 
 @app.post("/login")
-def login(data: Login):
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
     conn=sqlite3.connect("users.db")
     cursor=conn.cursor()
     cursor.execute(
-        "select * from users where email=?",(data.email,)
+        "select * from users where email=?",(form_data.username,)
     )
     user=cursor.fetchone()
     if user is None:
         return{
             "message":"User not found"
         }
-    elif bcrypt.checkpw(data.password.encode(),user[3].encode()):
+    elif bcrypt.checkpw(form_data.password.encode(),user[3].encode()):
         
         expiration_time=datetime.utcnow() + timedelta(minutes=30)
         payload={
