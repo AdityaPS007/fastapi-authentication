@@ -13,7 +13,7 @@ def verify_password(plain_password: str, hashed_password: str):
     return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 
-def create_access_token(user_id: int):
+def create_access_token(user_id: str):
     expiration_time=datetime.utcnow() + timedelta(minutes=30)
     
     payload={

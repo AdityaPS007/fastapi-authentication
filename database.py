@@ -1,19 +1,8 @@
-import sqlite3
+from pymongo import MongoClient
 
 
-def get_db_connection():
-    return sqlite3.connect("users.db")
+client=MongoClient("mongodb://localhost:27017")    # connect to the server
+db=client["firstapp"]                              # choose a database
+users_collection=db["users"]                       # choose a collection
 
-conn=sqlite3.connect("users.db")
-cursor=conn.cursor()
 
-cursor.execute("""
-               create table if not exists users(
-                   id integer primary key,
-                   name text,
-                   email text,
-                   password text)""")
-
-conn.commit()
-conn.close()
-print("Database Created Successfully")
