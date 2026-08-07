@@ -9,7 +9,10 @@ from routers.common import router as common_router
 
 app=FastAPI()
 
+# Register all authentication endpoints with FastAPI
 app.include_router(auth_router)
+
+# Register common/public endpoints
 app.include_router(common_router)
 
 

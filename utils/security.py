@@ -18,12 +18,24 @@ def create_access_token(user_id: str):
     
     payload={
         "user_id":user_id,
+        "type":"access",
         "exp":expiration_time
     }
     
     token=jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
     return token      # returns that JWT to the login function
 
-
-def decode_access_token(token: str):
+def decode_token(token: str):
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+
+def create_refresh_token(user_id: str):
+    expiration_time=datetime.utcnow() + timedelta(days=7)
+    
+    payload={
+        "user_id":user_id,
+        "type":"refresh",
+        "exp":expiration_time
+    }
+    token=jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
+    return token

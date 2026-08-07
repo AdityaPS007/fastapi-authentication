@@ -4,13 +4,14 @@ from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
 from schemas.user_schema import Register
-from utils.security import hash_password, verify_password, create_access_token, decode_access_token
+from utils.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from database import users_collection
 from bson import ObjectId
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
+# Group all authentication routes together
 router=APIRouter()
 
 
@@ -53,11 +54,13 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         }
     elif verify_password(form_data.password,user["password"]):
         
-        token=create_access_token(str(user["_id"]))
+        access_token=create_access_token(str(user["_id"]))
+        refresh_token=create_refresh_token(str(user["_id"]))
         
         return{
             "message":"login successful",
-            "access_token": token,
+            "access_token": access_token,
+            "refresh_token": refresh_token,
             "token_type": "bearer"
         }
     else:
@@ -70,8 +73,16 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 def get_current_user(token: str=Depends(oauth2_scheme)):
     try:
-        payload=decode_access_token(token)
+        payload=decode_token(token)
+        
+        if payload.get("type")!="access":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Access token required"
+            )
+            
         user_id=payload.get("user_id")
+        
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -91,7 +102,7 @@ def get_current_user(token: str=Depends(oauth2_scheme)):
 def get_profile(current_user: int=Depends(get_current_user)):
     
     user=users_collection.find_one({
-        "_id":ObjectId(current_user)
+        "_id":ObjectId(current_user)         # Convert the JWT user ID (string) back into a MongoDB ObjectId
     })
     
     
@@ -106,3 +117,35 @@ def get_profile(current_user: int=Depends(get_current_user)):
         "name":user["name"],
         "email":user["email"]
     }
+    
+@router.post("/refresh")
+def refresh(token: str=Depends(oauth2_scheme)):
+    try:
+        payload=decode_token(token)
+    
+        if payload.get("type")!="refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token"
+            )
+    
+        user_id=payload.get("user_id")
+    
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+        
+        new_access_token=create_access_token(user_id)
+    
+        return{
+            "access_token":new_access_token,
+            "token_type":"bearer"
+        }
+        
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
