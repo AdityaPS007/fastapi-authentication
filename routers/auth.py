@@ -34,7 +34,8 @@ def register(user:Register):
     users_collection.insert_one({
         "name":user.name,
         "email":user.email,
-        "password":hashed_password
+        "password":hashed_password,
+        "role":"user"
     })
     
     return{"message":"User Registered Successfully"}
@@ -54,8 +55,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         }
     elif verify_password(form_data.password,user["password"]):
         
-        access_token=create_access_token(str(user["_id"]))
-        refresh_token=create_refresh_token(str(user["_id"]))
+        access_token=create_access_token(str(user["_id"]), user["role"])
+        refresh_token=create_refresh_token(str(user["_id"]), user["role"])
         
         return{
             "message":"login successful",
@@ -82,27 +83,42 @@ def get_current_user(token: str=Depends(oauth2_scheme)):
             )
             
         user_id=payload.get("user_id")
+        role=payload.get("role")
         
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
-        return user_id
+        return {
+            "user_id":user_id,
+            "role":role
+        }
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token"
         )
+
+
+# --------- Check if Current User is Admin ---------        
         
+def require_admin(current_user=Depends(get_current_user)):
+    if current_user["role"]!="admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
         
+    return current_user
+
 #----------------User Profile--------------------
         
 @router.get("/profile")
 def get_profile(current_user: int=Depends(get_current_user)):
     
     user=users_collection.find_one({
-        "_id":ObjectId(current_user)         # Convert the JWT user ID (string) back into a MongoDB ObjectId
+        "_id":ObjectId(current_user["user_id"])         # Convert the JWT user ID (string) back into a MongoDB ObjectId
     })
     
     
@@ -118,6 +134,14 @@ def get_profile(current_user: int=Depends(get_current_user)):
         "email":user["email"]
     }
     
+
+@router.get("/admin")
+def admin_dashboard(current_user=Depends(require_admin)):
+    return{
+        "message":"Welcome Admin"
+    }
+    
+    
 @router.post("/refresh")
 def refresh(token: str=Depends(oauth2_scheme)):
     try:
@@ -130,6 +154,7 @@ def refresh(token: str=Depends(oauth2_scheme)):
             )
     
         user_id=payload.get("user_id")
+        role=payload.get("role")
     
         if user_id is None:
             raise HTTPException(
@@ -137,7 +162,7 @@ def refresh(token: str=Depends(oauth2_scheme)):
                 detail="Invalid token payload"
             )
         
-        new_access_token=create_access_token(user_id)
+        new_access_token=create_access_token(user_id, role)
     
         return{
             "access_token":new_access_token,
