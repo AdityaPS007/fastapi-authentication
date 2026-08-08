@@ -174,3 +174,36 @@ def refresh(token: str=Depends(oauth2_scheme)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token"
         )
+        
+
+
+@router.get("/users")
+def get_all_users(current_user=Depends(require_admin)):
+    users=list(users_collection.find())
+    
+    for user in users:
+        user["_id"]=str(user["_id"])
+        user.pop("password",None)
+    return users
+
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: str, current_user=Depends(require_admin)):
+    user=users_collection.find_one({
+        "_id":ObjectId(user_id)
+          
+    })
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+        
+    users_collection.delete_one({
+        "_id":ObjectId(user_id)
+    })
+    
+    return{
+        "message":"User deleted successfully"
+    }
