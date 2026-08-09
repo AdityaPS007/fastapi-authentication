@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
-from schemas.user_schema import Register
+from schemas.user_schema import Register, UpdateUser
 from utils.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from database import users_collection
 from bson import ObjectId
@@ -134,6 +134,7 @@ def get_profile(current_user: int=Depends(get_current_user)):
         "email":user["email"]
     }
     
+# Admin-only endpoint to verify admin access
 
 @router.get("/admin")
 def admin_dashboard(current_user=Depends(require_admin)):
@@ -141,6 +142,8 @@ def admin_dashboard(current_user=Depends(require_admin)):
         "message":"Welcome Admin"
     }
     
+
+# Generate a new access token using a valid refresh token
     
 @router.post("/refresh")
 def refresh(token: str=Depends(oauth2_scheme)):
@@ -176,6 +179,7 @@ def refresh(token: str=Depends(oauth2_scheme)):
         )
         
 
+# Retrieve a list of all registered users (Admin only)
 
 @router.get("/users")
 def get_all_users(current_user=Depends(require_admin)):
@@ -186,6 +190,8 @@ def get_all_users(current_user=Depends(require_admin)):
         user.pop("password",None)
     return users
 
+
+# Delete a user by ID (Admin only)
 
 @router.delete("/users/{user_id}")
 def delete_user(user_id: str, current_user=Depends(require_admin)):
@@ -206,4 +212,67 @@ def delete_user(user_id: str, current_user=Depends(require_admin)):
     
     return{
         "message":"User deleted successfully"
+    }
+    
+
+# Update the logged-in user's profile information
+    
+@router.patch("/profile")
+def update_profile(update_user:UpdateUser, current_user=Depends(get_current_user)):
+    user=users_collection.find_one({
+        "_id":ObjectId(current_user["user_id"])
+    })
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    update_data={}
+    
+    if update_user.name is not None:
+        update_data["name"]=update_user.name
+    
+    if update_user.email is not None:
+        update_data["email"]=update_user.email
+        
+    if update_user.password is not None:
+        update_data["password"]=hash_password(update_user.password)
+    
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields provided for update"
+        )  
+    
+    if "email" in update_data:
+        existing_user=users_collection.find_one({
+            "email":update_data["email"]
+        })
+        
+        if ( existing_user and str(existing_user["_id"])!=current_user["user_id"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already exists"
+            )
+          
+    users_collection.update_one(
+        {
+        "_id":ObjectId(current_user["user_id"])
+        },
+        {
+            "$set":update_data
+        })
+    
+    updated_user=users_collection.find_one({
+        "_id":ObjectId(current_user["user_id"])
+    })
+
+    updated_user["_id"]=str(updated_user["_id"])
+    updated_user.pop("password", None)
+    
+    return{
+        "message":"Profile updated successfully",
+        "user":updated_user
     }
