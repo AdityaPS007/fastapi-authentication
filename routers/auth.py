@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from schemas.user_schema import Register, UpdateUser
 from utils.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from database import users_collection
+from database import users_collection, blacklisted_tokens_collection
 from bson import ObjectId
 
 
@@ -80,6 +80,16 @@ def get_current_user(token: str=Depends(oauth2_scheme)):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Access token required"
+            )
+        
+        blacklisted_token=blacklisted_tokens_collection.find_one({
+            "token":token
+        })
+        
+        if blacklisted_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked"
             )
             
         user_id=payload.get("user_id")
@@ -275,4 +285,21 @@ def update_profile(update_user:UpdateUser, current_user=Depends(get_current_user
     return{
         "message":"Profile updated successfully",
         "user":updated_user
+    }
+    
+
+
+@router.post("/logout")
+def logout(token: str=Depends(oauth2_scheme)):
+    payload=decode_token(token)
+    
+    expires_at=datetime.fromtimestamp(payload["exp"])
+    
+    blacklisted_tokens_collection.insert_one({
+        "token":token,
+        "expires_at":expires_at
+    })
+    
+    return{
+        "message":"Logged out successfully"
     }
