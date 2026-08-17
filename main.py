@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from routers.auth import router as auth_router
 from routers.common import router as common_router
@@ -8,6 +9,13 @@ from routers.common import router as common_router
 
 
 app=FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,           # allows credentials such as cookies/authorization credentials when applicable
+    allow_methods=["*"],                   # Allow GET, POST, PUT, DELETE, etc
+    allow_headers=["*"],                   # Allow the request headers we're using
+)
 
 # Register all authentication endpoints with FastAPI
 app.include_router(auth_router)
