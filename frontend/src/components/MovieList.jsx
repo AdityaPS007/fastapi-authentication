@@ -30,9 +30,8 @@ function MovieList(props) {
             movies.map((movie) => (
                 <MovieCard 
                     key={movie.id}
-                    title={movie.title}
-                    genre={movie.genre}
-                    rating={movie.rating}
+                    movie={movie}
+                    currentUser={props.currentUser}
                 />
             ))
         }

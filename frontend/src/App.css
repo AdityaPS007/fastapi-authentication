@@ -182,3 +182,43 @@
     border-right-color: var(--border);
   }
 }
+
+
+
+/* Container that holds the complete reviews section */
+.reviews-section {
+    margin-top: 25px;
+}
+
+/* Individual card representing one review */
+.review-card {
+    width: 400px;
+    margin: 15px auto;
+    padding: 15px;
+    border: 1px solid #555;
+    border-radius: 10px;
+}
+
+/* Name of the person who wrote the review */
+.review-user {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+}
+
+/* Star rating of the review */
+.review-rating {
+    margin: 5px 0 10px 0;
+    font-size: 20px;
+}
+
+/* Actual review text */
+.review-text {
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Validation error shown when the review form is invalid */
+.review-error {
+    margin: 10px 0;
+    font-weight: bold;
+}

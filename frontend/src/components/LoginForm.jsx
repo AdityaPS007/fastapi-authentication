@@ -34,7 +34,7 @@ function LoginForm({onLogin, onSwitchToRegister}) {
             const token=localStorage.getItem("access_token")
 
             // Tell App that login was successful
-            onLogin()
+            // onLogin()
             
             // Get refresh token when we need to renew the access token
             const refreshToken=localStorage.getItem("refresh_token")
@@ -58,6 +58,9 @@ function LoginForm({onLogin, onSwitchToRegister}) {
             const profileData=await profileResponse.json()
 
             console.log(profileData)
+
+            // Send the logged-in user's profile information to App
+            onLogin(profileData)
 
             const refreshData= await refreshResponse.json()
 

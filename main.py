@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers.auth import router as auth_router
 from routers.common import router as common_router
+from routers.review import router as review_router
 
 
 
@@ -22,6 +23,9 @@ app.include_router(auth_router)
 
 # Register common/public endpoints
 app.include_router(common_router)
+
+# Register movie review endpoints
+app.include_router(review_router)
 
 
 
