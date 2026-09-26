@@ -2,13 +2,17 @@ function Hero() {
     
     return(
         <section>
-            <h1>Welcome to Movie Review System</h1>
+            <h1>Discover. Review. Discuss.</h1>
 
             <p>
-                Discover movies, read reviews and share your opinions.
+                Explore movies, read what others think, and share your own review.
             </p>
 
-            <button>Explore movies</button>
+            <button onClick={()=>{
+                document.getElementById("movies-section")?.scrollIntoView({
+                    behavior:"smooth"
+                })
+            }}>Browse movies</button>
         </section>
     )
 }

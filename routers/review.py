@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from database import reviews_collection, users_collection
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 from schemas.review_schema import ReviewCreate, ReviewUpdate
 from routers.auth import get_current_user
 
@@ -18,6 +19,19 @@ def create_review(review:ReviewCreate, current_user=Depends(get_current_user)):
     # Get the logged-in user's ID from the JWT
     user_id=current_user["user_id"]
     
+    # Check whether this user has already reviewed this movie
+    existing_review=reviews_collection.find_one({
+        "movie_id":review.movie_id,
+        "user_id":user_id
+    })
+    
+    # Prevent the same user from reviewing the same movie twice
+    if existing_review:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already reviewed the movie"
+        )
+    
     # Create the review document that will be stored in MongoDB
     review_document={
         "movie_id":review.movie_id,
@@ -27,8 +41,15 @@ def create_review(review:ReviewCreate, current_user=Depends(get_current_user)):
     }
     
     # Insert the review into MongoDB
-    result=reviews_collection.insert_one(review_document)
+    try:
+        result=reviews_collection.insert_one(review_document)
     
+    except DuplicateKeyError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You have already review this movie"
+        )
+        
     return{
         "message":"Review added successfully",
         "review_id":str(result.inserted_id)

@@ -3,9 +3,9 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
-from schemas.user_schema import Register, UpdateUser
+from schemas.user_schema import Register, UpdateUser, ChangePassword
 from utils.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
-from database import users_collection, blacklisted_tokens_collection
+from database import users_collection, blacklisted_tokens_collection, reviews_collection
 from bson import ObjectId
 
 
@@ -143,6 +143,28 @@ def get_profile(current_user: int=Depends(get_current_user)):
         "name":user["name"],
         "email":user["email"]
     }
+    
+#----------------Reviews Written by Current User--------------------
+
+@router.get("/profile/reviews")
+def get_my_reviews(current_user=Depends(get_current_user)):
+
+    # Get the logged-in user's ID from the JWT
+    user_id = current_user["user_id"]
+
+    # Find only reviews written by this user
+    reviews = list(
+        reviews_collection.find({
+            "user_id": user_id
+        })
+    )
+
+    # Convert MongoDB ObjectIds into strings for JSON response
+    for review in reviews:
+        review["id"] = str(review["_id"])
+        del review["_id"]
+
+    return reviews
     
 # Admin-only endpoint to verify admin access
 
@@ -302,4 +324,48 @@ def logout(token: str=Depends(oauth2_scheme)):
     
     return{
         "message":"Logged out successfully"
+    }
+
+
+
+@router.patch("/profile/password")
+def change_password(
+    data: ChangePassword,
+    current_user=Depends(get_current_user)
+):
+
+    user = users_collection.find_one({
+        "_id": ObjectId(current_user["user_id"])
+    })
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Verify that the user knows their current password
+    if not verify_password(data.current_password, user["password"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    # Prevent changing the password to the exact same password
+    if verify_password(data.new_password, user["password"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from current password"
+        )
+
+    # Hash the new password before storing it
+    new_hashed_password = hash_password(data.new_password)
+
+    users_collection.update_one(
+        {"_id": ObjectId(current_user["user_id"])},
+        {"$set": {"password": new_hashed_password}}
+    )
+
+    return {
+        "message": "Password changed successfully"
     }

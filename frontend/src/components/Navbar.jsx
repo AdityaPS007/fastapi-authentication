@@ -1,9 +1,31 @@
 function Navbar(props) {
     return(
-        <nav>
+        <nav className="navbar">
             <h2>{props.title}</h2>
-            {props.isLoggedIn ? <h3>Welcome {props.username}</h3> : <h3>Please Login</h3> }
-            <h3> {props.role}</h3>
+
+            <div className="navbar-user">
+                {props.isLoggedIn ? (
+                    <>
+                        <button
+                            type="button"
+                            className="profile-button"
+                            onClick={props.onProfileClick}
+                        >
+                            Welcome, {props.username}
+                        </button>
+
+                        <button onClick={props.onLogout}>Logout</button>
+                    </>
+                ):(
+                    <button
+                        type="button"
+                        onClick={props.onLoginRequest}
+                    >
+                        Please LogIn
+                    </button>
+                )}
+            </div>
+            
         </nav>
     )
 }

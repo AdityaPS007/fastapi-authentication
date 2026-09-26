@@ -5,7 +5,8 @@ import Hero from './components/Hero'
 import MovieList from './components/MovieList'
 import LoginForm from './components/LoginForm'
 import RegisterForm from './components/RegisterForm'
-
+import MovieDetails from './components/MovieDetails'
+import Profile from './components/Profile'
 
 function App() {
   
@@ -14,6 +15,12 @@ function App() {
   
   // Store information about the currently logged-in user
   const [currentUser, setCurrentUser]=useState(null)
+
+  // Store the movie currently selected by the user
+  const [selectedMovie, setSelectedMovie] = useState(null)
+
+  // Controls whether the user's profile is displayed
+  const [showProfile, setShowProfile] = useState(false)
 
 
   useEffect(() => {
@@ -106,6 +113,9 @@ function App() {
   // Controls which auth form is displayed
   const[showRegister, setShowRegister]=useState(false)
 
+  // Controls whether the login/register modal is visible
+  const [showAuthModal, setShowAuthModal] = useState(false)
+
   const handleLogout=async ()=> {
     
     // Get the JWT we want to revoke
@@ -130,29 +140,116 @@ function App() {
     }
   }
 
+  // Scroll the user to the login section when login is requested
+  const handleLoginRequest=() => {
+    document.getElementById("login-section")?.scrollIntoView({
+        behavior:"smooth"
+    })
+  }
+
   return (
     <div>
       <Navbar title="Movie Review System"
-              username={currentUser?.name || "User"}
-              
+              username={currentUser?.name || "User"} 
               isLoggedIn={isLoggedIn}
+              onLogout={handleLogout}
+              onLoginRequest={()=>{
+                setShowRegister(false)
+                setShowAuthModal(true)
+              }}
+              onProfileClick={() => {
+                  setSelectedMovie(null)
+                  setShowProfile(true)
+              }}
       />
-      
-      {isLoggedIn && (<button onClick={handleLogout}>Logout</button>)}
-      
-      <Hero />
 
-      {!isLoggedIn && (
-        <>
-            {showRegister?(<RegisterForm onSwitchToLogin={()=>setShowRegister(false)}/>):(<LoginForm onLogin={(profileData)=>{setIsLoggedIn(true) 
-              setCurrentUser(profileData)}} onSwitchToRegister={()=> setShowRegister(true)} />)}
-        </>
+      {showAuthModal && (
+            <div className="auth-modal-overlay">
+
+                <div className="auth-modal">
+
+                    {/* Close button */}
+                    <button
+                        type="button"
+                        className="auth-modal-close"
+                        onClick={() => setShowAuthModal(false)}
+                    >
+                        ×
+                    </button>
+
+                    {showRegister ? (
+
+                        <RegisterForm
+                            onSwitchToLogin={() => setShowRegister(false)}
+                        />
+
+                    ) : (
+
+                        <LoginForm
+                            onLogin={(profileData) => {
+                                setIsLoggedIn(true)
+                                setCurrentUser(profileData)
+                                setShowAuthModal(false)
+                            }}
+                            onSwitchToRegister={() => setShowRegister(true)}
+                        />
+
+                    )}
+
+                </div>
+
+            </div>
       )}
+      
+      {/* {isLoggedIn && (<button onClick={handleLogout}>Logout</button>)} */}
+      
+      {!selectedMovie && !showProfile && <Hero />}
+    
 
-      <MovieList 
-          isLoggedIn={isLoggedIn}
-          currentUser={currentUser}
-      />
+      {/* {selectedMovie ? (
+
+            <MovieDetails
+                movie={selectedMovie}
+                currentUser={currentUser}
+                onBack={() => setSelectedMovie(null)}
+            />
+
+        ) : (
+
+            <MovieList 
+                isLoggedIn={isLoggedIn}
+                currentUser={currentUser}
+                onLoginRequest={handleLoginRequest}
+                onMovieSelect={setSelectedMovie}
+            />
+
+        )} */}
+
+        {showProfile ? (
+
+                <Profile
+                    onBack={() => setShowProfile(false)}
+                    onProfileUpdate={(updatedUser) => setCurrentUser(updatedUser)}
+                />
+
+            ) : selectedMovie ? (
+
+                <MovieDetails
+                    movie={selectedMovie}
+                    currentUser={currentUser}
+                    onBack={() => setSelectedMovie(null)}
+                />
+
+            ) : (
+
+                <MovieList 
+                    isLoggedIn={isLoggedIn}
+                    currentUser={currentUser}
+                    onLoginRequest={handleLoginRequest}
+                    onMovieSelect={setSelectedMovie}
+                />
+
+            )}
       
     </div>
   )

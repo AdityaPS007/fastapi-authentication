@@ -20,3 +20,8 @@ class UpdateUser(BaseModel):
     name:Optional[str]=None
     email:Optional[str]=None
     password:Optional[str]=None
+
+
+class ChangePassword(BaseModel):
+    current_password:str
+    new_password:str

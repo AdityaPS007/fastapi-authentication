@@ -24,6 +24,12 @@ function ReviewForm(props) {
     // Store validation error message
     const[error, setError]=useState("")
 
+    // Calculate the average rating given by users
+    const averageRating=
+        reviews.length>0
+            ? reviews.reduce((sum, item)=> sum + item.rating, 0)/reviews.length
+            : 0
+
     // Fetch all reviews belonging to the current movie
     const fetchReviews= async () => {
         const response= await fetch(`http://localhost:8000/reviews/${props.movie.id}`)
@@ -88,7 +94,7 @@ function ReviewForm(props) {
         }
         
         // Get the JWT access token saved during login
-        const token=localStorage.getItem("access_token")
+        let token=localStorage.getItem("access_token")
 
         // Send the review to our FastAPI backend
         let response=await fetch("http://localhost:8000/reviews",{
@@ -105,17 +111,23 @@ function ReviewForm(props) {
         if(response.status===401) {
             const newToken=await refreshAccessToken()
 
-            if(newToken){
-                response=await fetch("http://localhost:8000/reviews",{
-                    method:"POST",
-                    headers:{"Content-Type":"application/json", Authorization:`Bearer ${newToken}`},
-                    body:JSON.stringify({
-                        movie_id:props.movie.id,
-                        review:review,
-                        rating:rating
-                    })
-                })
+            if(!newToken){
+                setError("Your session has expired. Please Login again.")
+                return
             }
+            // Use the new token for the retry request
+            token=newToken
+            
+            response=await fetch("http://localhost:8000/reviews",{
+                method:"POST",
+                headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`},
+                body:JSON.stringify({
+                    movie_id:props.movie.id,
+                    review:review,
+                    rating:rating
+                })
+            })
+            
         }
         
         // Convert FastAPI's response from JSON into a JavaScript object
@@ -123,18 +135,28 @@ function ReviewForm(props) {
 
         console.log(data)
 
-        // Clear the form after the review is successfully saved
-        if (response.ok){
-
-            // Clear the review textarea
-            setReview("")
-
-            // Reset the rating back to zero
-            setRating(0)
-
-            // Fetch the updated reviews so the new review appears immediately
-            fetchReviews()
+        // Handle the duplicate-review business rule
+        if(response.status===409) {
+            setError("You have already reviewed this movie.")
+            return
         }
+
+        // Handle any other failed request
+        if(!response.ok) {
+            setError(data.detail || "Failed to submit review.")
+        }
+
+        // Clear the review textarea
+        setReview("")
+
+        // Reset the rating back to zero
+        setRating(0)
+
+        // Fetch the updated reviews so the new review appears immediately
+        fetchReviews()
+
+        // Tell MovieCard that the reviews have changed
+        props.onReviewChange()
             
     }
 
@@ -203,6 +225,9 @@ function ReviewForm(props) {
 
             // Fetch the latest reviews from the backend
             fetchReviews()
+
+            // Tell MovieCard that the review has changed
+            props.onReviewChange()
         }
     }
 
@@ -252,55 +277,71 @@ function ReviewForm(props) {
 
             // Fetch the latest reviews so the deleted review disappears
             fetchReviews()
+
+            // Tell MovieCard that the reviews have changed
+            props.onReviewChange()
         }
     }
 
     return (
         <>
-            <form onSubmit={handleSubmit}>
+            {props.currentUser && (
+                <form className="review-form" onSubmit={handleSubmit}>
 
-                <h4>Review for {props.movie.title}</h4>
+                    <h4 className="reviews-heading">Write a Review for {props.movie.title}</h4>
 
-                <div>
-                    <label>Review: </label>
+                    <div>
+                        <label>Review: </label>
 
-                    <textarea
-                        value={review}
-                        // Update review state whenever the user types
-                        onChange={(event)=> setReview(event.target.value)}
-                        placeholder="Write your review..."
-                    />
-                </div>
+                        <textarea
+                            value={review}
+                            // Update review state whenever the user types
+                            onChange={(event)=> setReview(event.target.value)}
+                            placeholder="Write your review..."
+                        />
+                    </div>
 
-                <div>
-                    <p>Rating</p>
+                    <div>
+                        <p>Rating</p>
 
-                    {[1,2,3,4,5].map((star)=> (
-                        <button
-                            // Keep star buttons from submitting the form
-                            type="button"
-                            key={star}
-                            onClick={()=> setRating(star)}
-                        >
-                            {star<=rating ? "★" : "☆"}
-                        </button>
-                    ))}
-                </div>
+                        {[1,2,3,4,5].map((star)=> (
+                            <button
+                                // Keep star buttons from submitting the form
+                                type="button"
+                                key={star}
+                                onClick={()=> setRating(star)}
+                            >
+                                {star<=rating ? "★" : "☆"}
+                            </button>
+                        ))}
+                    </div>
 
-                {/* Display validation error if one exists */}
+                    {/* Display validation error if one exists */}
 
-                {error && (
-                    <p className="review-error">{error}</p>
-                )}
+                    {error && (
+                        <p className="review-error">{error}</p>
+                    )}
 
-                <button type="submit">Submit Review</button>
-            </form>
+                    <button type="submit">Submit Review</button>
+                </form>
+            )}
 
             {/* Display reviews retrieved from the backend */}
 
             <div className="reviews-section">
 
                 <h4>Reviews</h4>
+
+                {reviews.length > 0 ? (
+                    <p className="review-summary">
+                        ⭐ {averageRating.toFixed(1)} · {reviews.length}{" "}
+                        {reviews.length === 1 ? "Review" : "Reviews"}
+                    </p>
+                ):(
+                    <p className="review-empty">
+                        No reviews yet. Be the first to review this movie!
+                    </p>
+                )}
 
                 {reviews.map((item)=>{
 
