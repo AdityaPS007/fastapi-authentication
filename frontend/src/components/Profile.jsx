@@ -319,6 +319,25 @@ function Profile(props) {
         }
     }
 
+    // Calculate profile statistics from the user's reviews
+    const totalReviews = reviews.length
+
+    const moviesReviewed = new Set(
+        reviews.map((item) => item.movie_id)
+    ).size
+
+    const averageRating =
+        totalReviews > 0
+            ? reviews.reduce(
+                (sum, item) => sum + item.rating,
+                0
+            ) / totalReviews
+            : 0
+
+    const fiveStarReviews = reviews.filter(
+        (item) => item.rating === 5
+    ).length
+
 
     // Show loading message while data is being fetched
     if (loading) {
@@ -434,6 +453,7 @@ function Profile(props) {
 
             {/* User information */}
             {user && (
+                <>
 
                 <div className="profile-info">
 
@@ -542,6 +562,39 @@ function Profile(props) {
                     )}
 
                 </div>
+
+                {/* Profile statistics */}
+                <div className="profile-stats">
+                    <h3>My Statistics</h3>
+
+                    <div className="profile-stats-grid">
+
+                        {/* Number of unique movies reviewed */}
+                        <div className="profile-stat-card">
+                            <span className="profile-stat-icon">🎬</span>
+                            <strong>{moviesReviewed}</strong>
+                            <span>Movies Reviewed</span>
+                        </div>
+
+                        {/* Average rating given by the user */}
+                        <div className="profile-stat-card">
+                            <span className="profile-stat-icon">⭐</span>
+                            <strong>
+                                {averageRating.toFixed(1)}
+                            </strong>
+                            <span>Average Rating</span>
+                        </div>
+
+                        {/* Number of 5-star reviews */}
+                        <div className="profile-stat-card">
+                            <span className="profile-stat-icon">🌟</span>
+                            <strong>{fiveStarReviews}</strong>
+                            <span>5-Star Reviews</span>
+                        </div>
+
+                    </div>
+                </div>
+                </>
 
             )}
 
@@ -768,6 +821,11 @@ function Profile(props) {
                                     <div
                                         className="profile-review-card"
                                         key={item.id}
+                                        onClick={() => {
+                                            if (movie) {
+                                                props.onMovieSelect(movie)
+                                            }
+                                        }}
                                     >
 
                                         {/* Movie information */}
@@ -796,7 +854,7 @@ function Profile(props) {
                                             </div>
 
                                         ) : (
-
+                                            
                                             <h4>
                                                 Movie ID: {item.movie_id}
                                             </h4>

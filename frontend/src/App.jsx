@@ -230,6 +230,10 @@ function App() {
                 <Profile
                     onBack={() => setShowProfile(false)}
                     onProfileUpdate={(updatedUser) => setCurrentUser(updatedUser)}
+                    onMovieSelect={(movie) => {
+                        setShowProfile(false)
+                        setSelectedMovie(movie)
+                    }}
                 />
 
             ) : selectedMovie ? (

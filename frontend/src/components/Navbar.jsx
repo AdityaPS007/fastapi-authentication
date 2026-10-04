@@ -1,7 +1,10 @@
 function Navbar(props) {
     return(
         <nav className="navbar">
-            <h2>{props.title}</h2>
+            <h2 className="navbar-brand">
+                <span className="navbar-brand-icon">🎬</span>
+                <span>Movie Review System</span>
+            </h2>
 
             <div className="navbar-user">
                 {props.isLoggedIn ? (
